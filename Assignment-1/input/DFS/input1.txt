@@ -1,0 +1,21 @@
+DFS
+Andy
+Zoe
+10
+Andy Bill 4
+Andy Claire 3
+Andy Daniel 2
+Bill Elaine 3
+Bill Zoe 1
+Claire Elaine 4
+Claire Zoe 2
+Daniel Elaine 2 
+Daniel Zoe 2
+Elaine Zoe 2
+6
+Andy 5
+Bill 4
+Claire 3
+Daniel 2
+Elaine 1
+Zoe 0
