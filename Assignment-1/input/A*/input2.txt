@@ -2,9 +2,9 @@ A*
 S
 G3
 15
-S C 1
-S B 5
 S A 7
+S B 5
+S C 1
 C D 1
 D B 1
 B G3 3

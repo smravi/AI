@@ -1,0 +1,15 @@
+//homework hint
+A 0
+E 1
+F 2
+G 3
+H 4
+
+// vacareum expected result
+A 0
+I 1
+J 2
+K 3
+L 4
+H 5
+

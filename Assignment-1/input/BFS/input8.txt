@@ -1,0 +1,12 @@
+BFS
+Apple
+Cap
+4
+Apple Ball 10
+Ball Cap 10
+Apple Cap 20
+Cap Apple 15
+3
+Apple 10
+Ball 5
+Cap 0

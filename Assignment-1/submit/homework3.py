@@ -6,6 +6,7 @@ from collections import deque
 
 algo = ['BFS', 'DFS', 'UCS', 'A*']
 
+#https://urldefense.proofpoint.com/v2/url?u=https-3A__labs.vocareum.com_home_login.php-3Femail-3Dmadapoos-2540usc.edu&d=DQIFaQ&c=clK7kQUTWtAVEOVIgvi0NU5BOUHhpN0H8p7CSfnc_gI&r=dBYAGaL8vnzkmv_D3RBQAA&m=0QK3u1JdGVM-VeTZ_urnZw1RXc_umNqt8ab1Zvo6SnI&s=MFupP6DundDgnXtRaJWOorAKJIyFu7D1aHLZgx0bvSI&e=
 
 # graphDict
 # [
@@ -26,12 +27,21 @@ algo = ['BFS', 'DFS', 'UCS', 'A*']
 #  I:[A,B,D,I]
 #  F:[A,B,D,F]
 
+# create a namesTuple to store the edge details
+Edge = namedtuple('Edge', 'child edgecost order')
+# create a namedtuple priority
+Priority = namedtuple('Priority', 'fcost edgeorder node gcost, parent')
+# create the result route
+Route = namedtuple('Route', 'location time')
+
+
 # Edge = namedtuple('Edge', 'child edgecost order')
 # -------------------------------- Common Helpers----------------------------------------------------------
 def write(fileName, routePath):
     with open(fileName, 'w') as f:
         for hop in routePath:
             f.write('{} {}\n'.format(hop.location, str(hop.time)))
+        f.truncate(f.tell() - 1)
 
 
 # -------------------------------- InformedSearch Helpers-------------------------------------------------------
@@ -76,9 +86,8 @@ def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNo
     # insert the start node
     # Priority(fcost=5, edgeorder=1 node=Node(D), gcost, hcost, parent=Node(B)]
     # edgeorder  is of zero for the startNode . thats y initalizing to zero below
-    order = 0  # For breaking ties, we maintain the order in which the node is inserted in priority queue. Only works for UCS and A*
-    order +=1
-    prtuple = Priority(startNode_gcost + startNode_hcost, order , startNodeObj, startNode_gcost, None)
+    order = 1  # For breaking ties, we maintain the order in which the node is inserted in priority queue. Only works for UCS and A*
+    prtuple = Priority(startNode_gcost + startNode_hcost, order, startNodeObj, startNode_gcost, None)
     heapq.heappush(open_q, prtuple)
 
     while open_q:
@@ -93,7 +102,7 @@ def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNo
             # currentParentFromOpenQueue = findNodeInQueue(open_q, node_tuple.node)
             if not childFromOpenQueue and not edge.child in closed:
                 # cost calculation from closed
-                order +=1
+                order += 1
                 prtuple = Priority(costFunction(node_tuple, edge), order, edge.child, fetchgcost(node_tuple, edge),
                                    node_tuple.node)
                 heapq.heappush(open_q, prtuple)
@@ -217,8 +226,10 @@ def getBFSAccumulatedCost(graphDict, minPathToGoal):
 
 def bfsIterator(graphObj, startNodeObj, goalNodeObj):
     bfsqueue = queue.Queue()
-    minPathToNode = dict(zip(graphObj.graphDict.keys(), [[]] * len(graphObj.graphDict.keys())))
-    visited = dict(zip(graphObj.graphDict.keys(), [False] * len(graphObj.graphDict.keys())))
+    # minPathToNode = dict(zip(graphObj.graphDict.keys(), [[]] * len(graphObj.graphDict.keys())))
+    # visited = dict(zip(graphObj.graphDict.keys(), [False] * len(graphObj.graphDict.keys())))
+    minPathToNode = dict()
+    visited = dict()
     resultMinPath = []
 
     bfsqueue.put(startNodeObj)
@@ -232,12 +243,12 @@ def bfsIterator(graphObj, startNodeObj, goalNodeObj):
             return getBFSAccumulatedCost(graphObj.graphDict, resultMinPath)
         else:
             for edge in graphObj.graphDict[nodeObj]:
-                if not edge.child in bfsqueue.queue and not visited[edge.child]:
+                if not edge.child in bfsqueue.queue and not edge.child in visited:
                     bfsqueue.put(edge.child)
 
                 # compare and update path
                 newPathList = minPathToNode[nodeObj] + [edge.child]  # append two list
-                if not minPathToNode[edge.child] or len(minPathToNode[edge.child]) > len(newPathList):
+                if not edge.child in minPathToNode or len(minPathToNode[edge.child]) > len(newPathList):
                     minPathToNode[edge.child] = newPathList
                 else:
                     if len(minPathToNode[edge.child]) == len(newPathList):
@@ -263,9 +274,9 @@ class Graph:
 
 
 class Node(object):
-    def __init__(self, name, sundayTraffic):
+    def __init__(self, name):
         self.name = name
-        self.sundayTraffic = sundayTraffic
+        self.sundayTraffic = None
 
     def getName(self):
         return self.name
@@ -279,71 +290,74 @@ class Node(object):
 
 # --------------------------------Main Function----------------------------------------------------------
 # gets the input from the file and normalizes the input
+def main():
+    inputSpec = []
+    graphDict = dict()
+    nameToNodeMap = dict()
+    with open('input.txt', 'r') as file:
+        for line in file:
+            inputSpec.append(line.strip())
+    if len(inputSpec) > 0:
+        searchType = inputSpec[0]
+        startNode = inputSpec[1].strip()
+        goalNode = inputSpec[2].strip()
+        hops = int(inputSpec[3].strip())
+        index = 4  # this is the start index where the list of routes are specified
+        order = 1  # this order is used to break the tie for BFS if multiple paths of same length exists
+        hopList = []  # edge with pathcost list
+        for i in range(4, hops + index, 1):
+            hopList.append(inputSpec[i].strip())
 
-inputSpec = []
-graphDict = dict()
-nameToNodeMap = dict()
-inputFolder = '../input/UCS/'
-outputFolder = '../output/UCS/'
-with open(inputFolder + 'input3.txt', 'r') as file:
-    for line in file:
-        inputSpec.append(line.strip())
-if len(inputSpec) > 0:
-    searchType = inputSpec[0]
-    startNode = inputSpec[1].strip()
-    goalNode = inputSpec[2].strip()
-    hops = int(inputSpec[3])
-    index = 4  # this is the start index where the list of routes are specified
-    order = 1  # this order is used to break the tie for BFS if multiple paths of same length exists
-    hopList = []  # edge with pathcost list
-    for i in range(4, hops + index, 1):
-        hopList.append(inputSpec[i].strip())
-    sundayTrafficIndex = i + 1
-    sundayTrafficLines = int(inputSpec[sundayTrafficIndex])
-
-    for j in range(sundayTrafficIndex + 1, sundayTrafficIndex + sundayTrafficLines + 1, 1):
-        # the sunday traffic gives us detail about the number of nodes
-        nodeName, traffic = inputSpec[j].split(' ')
-        nodeObj = Node(nodeName.strip(), int(traffic))
-        # initialize the graph dictionary for all nodes
-        nameToNodeMap[nodeName] = nodeObj
-        graphDict[nodeObj] = []
-
-    # update the childlist and edge and the pathcost
-    # create a namesTuple to store the edge details
-    Edge = namedtuple('Edge', 'child edgecost order')
-    # create a namedtuple priority
-    Priority = namedtuple('Priority', 'fcost edgeorder node gcost, parent')
-    # create the result route
-    Route = namedtuple('Route', 'location time')
-    for hop in hopList:
-        parent, child, cost = hop.split(' ')
-        parent = parent.strip()
-        child = child.strip()
-        cost = cost.strip()
-        if nameToNodeMap[parent] in graphDict:
+        # update the childlist and edge and the pathcost
+        for hop in hopList:
+            parent, child, cost = hop.split(' ')
+            parent = parent.strip()
+            child = child.strip()
+            cost = cost.strip()
             if searchType == 'BFS' or searchType == 'DFS':
                 cost = 1
             else:
                 cost = int(cost)
+            if not parent in nameToNodeMap:
+                nodeObj = Node(parent)
+                nameToNodeMap[parent] = nodeObj
+                graphDict[nodeObj] = []
+            if not child in nameToNodeMap:
+                nodeObj = Node(child)
+                nameToNodeMap[child] = nodeObj
+                graphDict[nodeObj] = []
+            # create an edge for this parent and child
             edge = Edge(nameToNodeMap[child], cost, order)
             graphDict[nameToNodeMap[parent]].append(edge)
-        order += 1
+            order += 1
 
-    # initialize the Graph
-    # def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNode_hcost, costFunction):
-    graphObj = Graph(searchType, True, sundayTrafficLines, graphDict)
+        # sunday traffic
+        sundayTrafficIndex = i + 1
+        sundayTrafficLines = int(inputSpec[sundayTrafficIndex])
+        for j in range(sundayTrafficIndex + 1, sundayTrafficIndex + sundayTrafficLines + 1, 1):
+            # the sunday traffic gives us detail about the number of nodes
+            nodeName, traffic = inputSpec[j].split(' ')
+            nodeName = nodeName.strip()
+            traffic = traffic.strip()
+            if nodeName in nameToNodeMap:
+                nameToNodeMap[nodeName].sundayTraffic = int(traffic)
 
-    if searchType == 'BFS':
-        totalPathCost = bfsIterator(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode])
-    if searchType == 'UCS':
-        totalPathCost = informedSearch(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode], 0, 0,
-                                       ucsCostFunction)
-    if searchType == 'A*':
-        totalPathCost = informedSearch(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode],
-                                       0, nameToNodeMap[startNode].sundayTraffic, acostFunction)
-    if searchType == 'DFS':
-        totalPathCost = dfsIterator(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode])
+        # initialize the Graph
+        # def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNode_hcost, costFunction):
+        graphObj = Graph(searchType, True, sundayTrafficLines, graphDict)
 
-    print(totalPathCost)
-    write(outputFolder+'output3.txt', totalPathCost)
+        if searchType == 'BFS':
+            totalPathCost = bfsIterator(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode])
+        if searchType == 'UCS':
+            totalPathCost = informedSearch(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode], 0, 0,
+                                           ucsCostFunction)
+        if searchType == 'A*':
+            totalPathCost = informedSearch(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode],
+                                           0, nameToNodeMap[startNode].sundayTraffic, acostFunction)
+        if searchType == 'DFS':
+            totalPathCost = dfsIterator(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode])
+
+    write('output.txt', totalPathCost)
+
+if __name__ == '__main__':
+    main()
