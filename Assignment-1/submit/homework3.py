@@ -6,7 +6,6 @@ from collections import deque
 
 algo = ['BFS', 'DFS', 'UCS', 'A*']
 
-#https://urldefense.proofpoint.com/v2/url?u=https-3A__labs.vocareum.com_home_login.php-3Femail-3Dmadapoos-2540usc.edu&d=DQIFaQ&c=clK7kQUTWtAVEOVIgvi0NU5BOUHhpN0H8p7CSfnc_gI&r=dBYAGaL8vnzkmv_D3RBQAA&m=0QK3u1JdGVM-VeTZ_urnZw1RXc_umNqt8ab1Zvo6SnI&s=MFupP6DundDgnXtRaJWOorAKJIyFu7D1aHLZgx0bvSI&e=
 
 # graphDict
 # [
@@ -37,7 +36,8 @@ Route = namedtuple('Route', 'location time')
 
 # Edge = namedtuple('Edge', 'child edgecost order')
 # -------------------------------- Common Helpers----------------------------------------------------------
-def write(fileName, routePath):
+
+def writeOutput(fileName, routePath):
     with open(fileName, 'w') as f:
         for hop in routePath:
             f.write('{} {}\n'.format(hop.location, str(hop.time)))
@@ -114,16 +114,17 @@ def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNo
                 if childFromOpenQueue.fcost > currentCost:
                     newPriority = Priority(currentCost, order, edge.child, fetchgcost(node_tuple, edge),
                                            node_tuple.node)
-                    if newPriority:
-                        for i in open_q:
-                            if newPriority.node == i.node:
-                                indexValue = open_q.index(i)
-                                break
-                        if indexValue != None:
-                            open_q[indexValue] = open_q[-1]
-                            open_q.pop()
-                            heapq.heapify(open_q)
-                            heapq.heappush(open_q, newPriority)
+                    # **** open_q.index(childFromOpenQueue) will gove index.. no need for loop
+                    for i in open_q:
+                        if newPriority.node == i.node:
+                            indexValue = open_q.index(i)
+                            break
+                    if indexValue != None:
+                        open_q[indexValue] = open_q[-1]
+                        open_q.pop()
+                        heapq.heapify(open_q)
+                        heapq.heappush(open_q, newPriority)
+
             else:
                 if edge.child in closed:
                     childFromClosedQueue = closed[edge.child]
@@ -132,9 +133,9 @@ def informedSearch(graphObj, startNodeObj, goalNodeObj, startNode_gcost, startNo
                         order += 1
                         newPriority = Priority(currentCost, order, edge.child, fetchgcost(node_tuple, edge),
                                                node_tuple.node)
-                        if newPriority:
-                            del closed[edge.child]
-                            heapq.heappush(open_q, newPriority)
+
+                        del closed[edge.child]
+                        heapq.heappush(open_q, newPriority)
         closed[node_tuple.node] = node_tuple
 
 
@@ -171,11 +172,12 @@ def dfsIterator(graphObj, startNodeObj, goalNodeObj):
                 if childFromDequeue.fcost > currentCost:
                     newPriority = Priority(currentCost, edge.order, edge.child, currentCost,
                                            node_tuple.node)
-                    if newPriority:
-                        for i in dfs_queue:
-                            if newPriority.node == i.node:
-                                dfs_queue.remove(i)
-                                break
+
+                    for i in dfs_queue:
+                        if newPriority.node == i.node:
+                            dfs_queue.remove(i)
+                            break
+                    dfs_queue.appendleft(newPriority)
             else:
                 if edge.child in closed:
                     childFromClosedQueue = closed[edge.child]
@@ -183,9 +185,8 @@ def dfsIterator(graphObj, startNodeObj, goalNodeObj):
                     if childFromClosedQueue.fcost > currentCost:
                         newPriority = Priority(currentCost, edge.order, edge.child,
                                                currentCost, node_tuple.node)
-                        if newPriority:
-                            del closed[edge.child]
-                            dfs_queue.appendleft(newPriority)
+                        del closed[edge.child]
+                        dfs_queue.appendleft(newPriority)
         closed[node_tuple.node] = node_tuple
 
 
@@ -226,8 +227,6 @@ def getBFSAccumulatedCost(graphDict, minPathToGoal):
 
 def bfsIterator(graphObj, startNodeObj, goalNodeObj):
     bfsqueue = queue.Queue()
-    # minPathToNode = dict(zip(graphObj.graphDict.keys(), [[]] * len(graphObj.graphDict.keys())))
-    # visited = dict(zip(graphObj.graphDict.keys(), [False] * len(graphObj.graphDict.keys())))
     minPathToNode = dict()
     visited = dict()
     resultMinPath = []
@@ -305,9 +304,10 @@ def main():
         index = 4  # this is the start index where the list of routes are specified
         order = 1  # this order is used to break the tie for BFS if multiple paths of same length exists
         hopList = []  # edge with pathcost list
-        for i in range(4, hops + index, 1):
-            hopList.append(inputSpec[i].strip())
 
+        for hopIterator in range(4, hops + index, 1):
+            hopList.append(inputSpec[hopIterator].strip())
+        trafficIterator = hopIterator
         # update the childlist and edge and the pathcost
         for hop in hopList:
             parent, child, cost = hop.split(' ')
@@ -332,11 +332,11 @@ def main():
             order += 1
 
         # sunday traffic
-        sundayTrafficIndex = i + 1
+        sundayTrafficIndex = trafficIterator + 1
         sundayTrafficLines = int(inputSpec[sundayTrafficIndex])
-        for j in range(sundayTrafficIndex + 1, sundayTrafficIndex + sundayTrafficLines + 1, 1):
+        for heuristic in range(sundayTrafficIndex + 1, sundayTrafficIndex + sundayTrafficLines + 1, 1):
             # the sunday traffic gives us detail about the number of nodes
-            nodeName, traffic = inputSpec[j].split(' ')
+            nodeName, traffic = inputSpec[heuristic].split(' ')
             nodeName = nodeName.strip()
             traffic = traffic.strip()
             if nodeName in nameToNodeMap:
@@ -357,7 +357,7 @@ def main():
         if searchType == 'DFS':
             totalPathCost = dfsIterator(graphObj, nameToNodeMap[startNode], nameToNodeMap[goalNode])
 
-    write('output.txt', totalPathCost)
+        writeOutput('output.txt', totalPathCost)
 
 if __name__ == '__main__':
     main()
