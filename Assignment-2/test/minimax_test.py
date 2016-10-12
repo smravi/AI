@@ -7,9 +7,6 @@ import timeit
 
 # Define namedTuples
 
-Gamescore = namedtuple('Gamescore', 'evalValue, player playerscore opponent opponentscore')
-EvalFunction = namedtuple('EvalFunction', 'evalValue, iIndex, jIndex')
-
 
 def writeOutput(fileName, state, boardState):
     with open(fileName, 'w') as f:
@@ -286,6 +283,7 @@ def main(inputFile, outputFile):
     player = inputSpec[2].strip()
     moveMaker = currentPlayer = player
     depth = int(inputSpec[3].strip())
+    print(depth)
     gameCellIterator = 4
     for row in range(matrixDimension):
         gameCell.append(list(map(int, inputSpec[gameCellIterator + row].split(' '))))
@@ -305,8 +303,8 @@ def main(inputFile, outputFile):
                                                              gameCell)
     state = chr(jNew + 65) + str(iNew + 1) + ' ' + move
     writeOutput(outputFile, state, boardState)
-    print(state)
-    print(boardState)
+    #print(state)
+    #print(boardState)
 
 
 if __name__ == '__main__':

@@ -1,10 +1,7 @@
 import sys
-from collections import namedtuple
 import math
 import copy
 import timeit
-
-globalInc = 0
 
 
 def writeOutput(fileName, state, boardState):
@@ -90,25 +87,17 @@ def isValidStake(boardState, i, j, matrixDimension, player):
 
 def markRaidPositions(boardState, i, j, matrixDimension, currentPlayer):
     opponent = getOpponent(currentPlayer)
-    markedPositions = []
     if isInRange(i, j - 1, matrixDimension) and boardState[i][j - 1] == opponent:
         boardState[i][j - 1] = currentPlayer
-        markedPositions.append((i, j - 1))
     if isInRange(i, j + 1, matrixDimension) and boardState[i][j + 1] == opponent:
         boardState[i][j + 1] = currentPlayer
-        markedPositions.append((i, j + 1))
     if isInRange(i + 1, j, matrixDimension) and boardState[i + 1][j] == opponent:
         boardState[i + 1][j] = currentPlayer
-        markedPositions.append((i + 1, j))
     if isInRange(i - 1, j, matrixDimension) and boardState[i - 1][j] == opponent:
         boardState[i - 1][j] = currentPlayer
-        markedPositions.append((i - 1, j))
-    return markedPositions
 
 
-def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth, opteval):
-    global globalInc
-    globalInc += 1
+def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth):
     iTile = -1
     jTile = -1
     if currentDepth % 2 == 0:
@@ -118,8 +107,7 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
 
     # break recursion
     if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
-        # evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
-        evalValue = opteval
+        evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
         return evalValue, iTile, jTile
     # maximizer is in position 0,2,4
 
@@ -131,25 +119,14 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
                 if isValidStake(localBoard, i, j, matrixDimension, currentPlayer):
                     # Stake move
                     localBoard[i][j] = currentPlayer
-                    moveVal = gameCell[i][j]
                 else:
                     # Possibility of raid move so mark the neighboring states and pass down
                     localBoard[i][j] = currentPlayer
-                    markedPositions = markRaidPositions(localBoard, i, j, matrixDimension, currentPlayer)
-                    opponentVal = gameCell[i][j]
-                    moveVal = 0
-                    for position in markedPositions:
-                        opponentVal += gameCell[position[0]][position[1]]
-                        previousPlayerVal = moveVal - gameCell[i][j]
-                        moveVal = opponentVal + previousPlayerVal
-                if currentPlayer == moveMaker:
-                    utility, unused1, unused2 = minimax(localBoard, gameCell, matrixDimension, moveMaker,
-                                                        getOpponent(currentPlayer),
-                                                        depthLimit, currentDepth + 1, opteval + moveVal)
-                else:
-                    utility, unused1, unused2 = minimax(localBoard, gameCell, matrixDimension, moveMaker,
-                                                        getOpponent(currentPlayer),
-                                                        depthLimit, currentDepth + 1, opteval - moveVal)
+                    markRaidPositions(localBoard, i, j, matrixDimension, currentPlayer)
+
+                utility, unused1, unused2 = minimax(localBoard, gameCell, matrixDimension, moveMaker,
+                                                    getOpponent(currentPlayer),
+                                                    depthLimit, currentDepth + 1)
                 # We are in maximiser
                 if currentDepth % 2 == 0:
                     #                    if utility > evalValue and utility > alpha:
@@ -290,14 +267,12 @@ def calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMak
     return iNew, jNew, move, boardState
 
 
-def main(inputFile, outputFile):
-    # inputFile = input()
-    # outputFile = input()
+def main():
     inputSpec = []
     gameCell = []
     boardState = []
 
-    with open('../input/' + inputFile, 'r') as file:
+    with open('input.txt', 'r') as file:
         for line in file:
             inputSpec.append(line.strip())
     if len(inputSpec) > 0:
@@ -316,8 +291,7 @@ def main(inputFile, outputFile):
         if algorithm == 'MINIMAX':
 
             maximizerVal, iTile, jTile = minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                                 currentDepth,
-                                                 getEvalScore(boardState, gameCell, moveMaker, matrixDimension))
+                                                 currentDepth)
         elif algorithm == 'ALPHABETA':
             maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
                                                    currentDepth, -math.inf, math.inf)
@@ -325,28 +299,13 @@ def main(inputFile, outputFile):
         iNew, jNew, move, boardState = calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMaker,
                                                                  gameCell)
         state = chr(jNew + 65) + str(iNew + 1) + ' ' + move
-        writeOutput('../output/' + outputFile, state, boardState)
-        # print(globalInc)
+        writeOutput('output.txt', state, boardState)
         print(state)
         print(boardState)
 
 
 if __name__ == '__main__':
-    # main()
-    exec_time = '{:.2f}s'.format(timeit.timeit("main('input6.txt', 'output6.txt')",
-                                               setup="from __main__ import main", number=1))
-    print(exec_time)
-    # isBoardComplete
-    # isValidStake
-    # getStakeScore
-    # getRaidScore
-    # getOpponent
-    # isPositionEmpty
-    # minimax
-    # alphabeta
-    # isTerminalState
-    # writeNextMove
-    # getNextMove
-    # getEvalScore
-    # setPosition
-    # isInRange - check if the i and j values are within the matrix range of values
+    main()
+# exec_time = '{:.2f}s'.format(timeit.timeit("main()",
+#                                                setup="from __main__ import main", number=1))
+# print(exec_time)
