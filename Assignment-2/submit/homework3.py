@@ -101,12 +101,12 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
     iTile = -1
     jTile = -1
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = - float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
-    if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
+    if isBoardComplete(boardState, matrixDimension) or currentDepth == depthLimit:
         evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
         return evalValue, iTile, jTile
     # maximizer is in position 0,2,4
@@ -149,12 +149,12 @@ def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, d
     jTile = -1
 
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = -float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
-    if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
+    if isBoardComplete(boardState, matrixDimension) or currentDepth == depthLimit:
         evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
         return evalValue, iTile, jTile
     # maximizer is in position 0,2,4
@@ -293,8 +293,9 @@ def main():
             maximizerVal, iTile, jTile = minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
                                                  currentDepth)
         elif algorithm == 'ALPHABETA':
-            maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                                   currentDepth, -math.inf, math.inf)
+            maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer,
+                                                   depth,
+                                                   currentDepth, -float("inf"), float("inf"))
 
         iNew, jNew, move, boardState = calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMaker,
                                                                  gameCell)
@@ -305,7 +306,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-# exec_time = '{:.2f}s'.format(timeit.timeit("main()",
-#                                                setup="from __main__ import main", number=1))
-# print(exec_time)
+# main()
+    exec_time = '{:.2f}s'.format(timeit.timeit("main()",
+                                               setup="from __main__ import main", number=1))
+    print(exec_time)

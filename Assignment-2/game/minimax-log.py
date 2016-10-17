@@ -7,6 +7,20 @@ import timeit
 globalInc = 0
 
 
+def writeBoard(node, depth, score, alpha, beta, traversef):
+    traversef.write(' '.join([node, str(depth), str(score), str(alpha), str(beta)]))
+    traversef.write('\n')
+
+
+def openBoard():
+    traversef = open('traverseLog.txt', 'w')
+    return traversef
+
+
+def closeBoard(traversef):
+    traversef.close()
+
+
 def writeOutput(fileName, state, boardState):
     with open(fileName, 'w') as f:
         f.write('{}\n'.format(state))
@@ -14,7 +28,7 @@ def writeOutput(fileName, state, boardState):
             for j, col in enumerate(row):
                 f.write(boardState[i][j])
             f.write('\n')
-        f.truncate(f.tell() - 1)
+            # f.truncate(f.tell() - 1)
 
 
 def isBoardComplete(board, matrixDimension):
@@ -106,23 +120,32 @@ def markRaidPositions(boardState, i, j, matrixDimension, currentPlayer):
     return markedPositions
 
 
-def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth, opteval):
+def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth, opteval, iPrint,
+            jPrint, traversef):
     global globalInc
     globalInc += 1
     iTile = -1
     jTile = -1
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = -float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
-    if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
+    if isBoardComplete(boardState, matrixDimension) or currentDepth == depthLimit:
         # evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
         evalValue = opteval
+
+        if currentDepth != 0:
+            writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, 'NA', 'NA', traversef)
+        else:
+            writeBoard('player', currentDepth, evalValue, 'NA', 'NA')
         return evalValue, iTile, jTile
     # maximizer is in position 0,2,4
-
+    if currentDepth != 0:
+        writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, 'NA', 'NA', traversef)
+    else:
+        writeBoard('player', currentDepth, evalValue, 'NA', 'NA', traversef)
     for i in range(matrixDimension):
         for j in range(matrixDimension):
             if isPositionEmpty(boardState, i, j):
@@ -140,16 +163,16 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
                     moveVal = 0
                     for position in markedPositions:
                         opponentVal += gameCell[position[0]][position[1]]
-                        previousPlayerVal = moveVal - gameCell[i][j]
-                        moveVal = opponentVal + previousPlayerVal
+                    previousPlayerVal = opponentVal - gameCell[i][j]
+                    moveVal = opponentVal + previousPlayerVal
                 if currentPlayer == moveMaker:
                     utility, unused1, unused2 = minimax(localBoard, gameCell, matrixDimension, moveMaker,
                                                         getOpponent(currentPlayer),
-                                                        depthLimit, currentDepth + 1, opteval + moveVal)
+                                                        depthLimit, currentDepth + 1, opteval + moveVal, i, j, traversef)
                 else:
                     utility, unused1, unused2 = minimax(localBoard, gameCell, matrixDimension, moveMaker,
                                                         getOpponent(currentPlayer),
-                                                        depthLimit, currentDepth + 1, opteval - moveVal)
+                                                        depthLimit, currentDepth + 1, opteval - moveVal, i, j, traversef)
                 # We are in maximiser
                 if currentDepth % 2 == 0:
                     #                    if utility > evalValue and utility > alpha:
@@ -164,21 +187,31 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
                     #                    if utility < evalValue and utility < beta:
                     if utility < evalValue:
                         evalValue = utility
+                if currentDepth != 0:
+                    writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, 'NA', 'NA', traversef)
+                else:
+                    writeBoard('player', currentDepth, evalValue, 'NA', 'NA', traversef)
     return evalValue, iTile, jTile
 
 
-def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth, alpha, beta):
+def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth, alpha, beta,
+              opteval, iPrint, jPrint, traversef):
     iTile = -1
     jTile = -1
 
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = -float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
-    if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
-        evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
+    if isBoardComplete(boardState, matrixDimension) or currentDepth == depthLimit:
+        # evalValue = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
+        evalValue = opteval
+        if currentDepth != 0:
+            writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, alpha, beta, traversef)
+        else:
+            writeBoard('player', currentDepth, evalValue, alpha, beta, traversef)
         return evalValue, iTile, jTile
     # maximizer is in position 0,2,4
     prune = False
@@ -194,14 +227,29 @@ def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, d
                 if isValidStake(localBoard, i, j, matrixDimension, currentPlayer):
                     # Stake move
                     localBoard[i][j] = currentPlayer
+                    moveVal = gameCell[i][j]
                 else:
                     # Possibility of raid move so mark the neighboring states and pass down
                     localBoard[i][j] = currentPlayer
-                    markRaidPositions(localBoard, i, j, matrixDimension, currentPlayer)
+                    markedPositions = markRaidPositions(localBoard, i, j, matrixDimension, currentPlayer)
+                    opponentVal = gameCell[i][j]
+                    moveVal = 0
+                    for position in markedPositions:
+                        opponentVal += gameCell[position[0]][position[1]]
+                    previousPlayerVal = opponentVal - gameCell[i][j]
+                    moveVal = opponentVal + previousPlayerVal
 
-                utility, iVal, jVal = alphaBeta(localBoard, gameCell, matrixDimension, moveMaker,
-                                                getOpponent(currentPlayer),
-                                                depthLimit, currentDepth + 1, alpha, beta)
+                if currentPlayer == moveMaker:
+                    utility, unused1, unused2 = alphaBeta(localBoard, gameCell, matrixDimension, moveMaker,
+                                                          getOpponent(currentPlayer),
+                                                          depthLimit, currentDepth + 1, alpha, beta, opteval + moveVal,
+                                                          i, j, traversef)
+                else:
+                    utility, unused1, unused2 = alphaBeta(localBoard, gameCell, matrixDimension, moveMaker,
+                                                          getOpponent(currentPlayer),
+                                                          depthLimit, currentDepth + 1, alpha, beta, opteval - moveVal,
+                                                          i, j, traversef)
+
                 # We are in maximiser
                 if currentDepth % 2 == 0:
                     if evalValue < utility:
@@ -228,7 +276,15 @@ def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, d
                         else:
                             prune = True
                             break
-
+                if currentDepth != 0:
+                    writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, alpha, beta, traversef)
+                else:
+                    writeBoard('player', currentDepth, evalValue, alpha, beta, traversef)
+    if prune:
+        if currentDepth != 0:
+            writeBoard(chr(jPrint + 65) + str(iPrint + 1), currentDepth, evalValue, alpha, beta, traversef)
+        else:
+            writeBoard('player', currentDepth, evalValue, alpha, beta, traversef)
     return evalValue, iTile, jTile
 
 
@@ -297,7 +353,7 @@ def main(inputFile, outputFile):
     gameCell = []
     boardState = []
 
-    with open('../input/' + inputFile, 'r') as file:
+    with open(inputFile, 'r') as file:
         for line in file:
             inputSpec.append(line.strip())
     if len(inputSpec) > 0:
@@ -313,27 +369,30 @@ def main(inputFile, outputFile):
         for row in range(matrixDimension):
             boardState.append(list(inputSpec[boardStateIterator + row]))
         currentDepth = 0
+        initialScore = getEvalScore(boardState, gameCell, moveMaker, matrixDimension)
+        traversef = openBoard()
         if algorithm == 'MINIMAX':
 
             maximizerVal, iTile, jTile = minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                                 currentDepth,
-                                                 getEvalScore(boardState, gameCell, moveMaker, matrixDimension))
+                                                 currentDepth, initialScore, -99, -99, traversef)
         elif algorithm == 'ALPHABETA':
-            maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                                   currentDepth, -math.inf, math.inf)
+            maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer,
+                                                   depth,
+                                                   currentDepth, -float("inf"), float("inf"), initialScore, -99, -99, traversef)
 
         iNew, jNew, move, boardState = calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMaker,
                                                                  gameCell)
+        closeBoard(traversef)
         state = chr(jNew + 65) + str(iNew + 1) + ' ' + move
-        writeOutput('../output/' + outputFile, state, boardState)
+        writeOutput(outputFile, state, boardState)
         # print(globalInc)
-        print(state)
-        print(boardState)
+        # print(state)
+        # print(boardState)
 
 
 if __name__ == '__main__':
     # main()
-    exec_time = '{:.2f}s'.format(timeit.timeit("main('input6.txt', 'output6.txt')",
+    exec_time = '{:.2f}s'.format(timeit.timeit("main('../input/input20.txt', 'dev-test-output/output20.txt')",
                                                setup="from __main__ import main", number=1))
     print(exec_time)
     # isBoardComplete
@@ -342,7 +401,7 @@ if __name__ == '__main__':
     # getRaidScore
     # getOpponent
     # isPositionEmpty
-    # minimax
+    # minimax.py
     # alphabeta
     # isTerminalState
     # writeNextMove

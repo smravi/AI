@@ -5,9 +5,6 @@ import copy
 import timeit
 
 
-# Define namedTuples
-
-
 def writeOutput(fileName, state, boardState):
     with open(fileName, 'w') as f:
         f.write('{}\n'.format(state))
@@ -75,16 +72,16 @@ def getStakeScore(gameCell, i, j):
 
 
 def isValidStake(boardState, i, j, matrixDimension, player):
-    isStake = True
     if isInRange(i, j - 1, matrixDimension) and boardState[i][j - 1] == player:
-        isStake = False
+        return False
     if isInRange(i, j + 1, matrixDimension) and boardState[i][j + 1] == player:
-        isStake = False
+        return False
     if isInRange(i + 1, j, matrixDimension) and boardState[i + 1][j] == player:
-        isStake = False
+        return False
     if isInRange(i - 1, j, matrixDimension) and boardState[i - 1][j] == player:
-        isStake = False
-    return isStake
+        return False
+    return True
+
 
 # def isRaidValid(boardState, i, j, matrixDimension, currentPlayer):
 
@@ -100,13 +97,14 @@ def markRaidPositions(boardState, i, j, matrixDimension, currentPlayer):
     if isInRange(i - 1, j, matrixDimension) and boardState[i - 1][j] == opponent:
         boardState[i - 1][j] = currentPlayer
 
+
 def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depthLimit, currentDepth):
     iTile = -1
     jTile = -1
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = - float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
     if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
@@ -117,7 +115,8 @@ def minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, dep
     for i in range(matrixDimension):
         for j in range(matrixDimension):
             if isPositionEmpty(boardState, i, j):
-                localBoard = copy.deepcopy(boardState)
+                # localBoard = copy.deepcopy(boardState)
+                localBoard = [eachRow[:] for eachRow in boardState]
                 if isValidStake(localBoard, i, j, matrixDimension, currentPlayer):
                     # Stake move
                     localBoard[i][j] = currentPlayer
@@ -151,9 +150,9 @@ def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, d
     jTile = -1
 
     if currentDepth % 2 == 0:
-        evalValue = -math.inf
+        evalValue = -float("inf")
     else:
-        evalValue = math.inf
+        evalValue = float("inf")
 
     # break recursion
     if currentDepth == depthLimit or isBoardComplete(boardState, matrixDimension):
@@ -167,7 +166,8 @@ def alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, d
         for j in range(matrixDimension):
             if isPositionEmpty(boardState, i, j):
 
-                localBoard = copy.deepcopy(boardState)
+                # localBoard = copy.deepcopy(boardState)
+                localBoard = [eachRow[:] for eachRow in boardState]
 
                 if isValidStake(localBoard, i, j, matrixDimension, currentPlayer):
                     # Stake move
@@ -258,7 +258,7 @@ def calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMak
                         iNew, jNew = i, j
                         break
                     revertPosition(tempBoardTie, i, j, moveMaker)
-                        # Now move will have the actual final move after breaking ties and iNew and jNew contains the position that MoveMaker should take
+                    # Now move will have the actual final move after breaking ties and iNew and jNew contains the position that MoveMaker should take
     # setFinalBoardState in the boardState matrix
     if move == 'Stake':
         setPosition(boardState, iNew, jNew, moveMaker)
@@ -278,26 +278,27 @@ def main(inputFile, outputFile):
     with open(inputFile, 'r') as file:
         for line in file:
             inputSpec.append(line.strip())
-    matrixDimension = int(inputSpec[0].strip())
-    algorithm = inputSpec[1].strip()
-    player = inputSpec[2].strip()
-    moveMaker = currentPlayer = player
-    depth = int(inputSpec[3].strip())
-    print(depth)
-    gameCellIterator = 4
-    for row in range(matrixDimension):
-        gameCell.append(list(map(int, inputSpec[gameCellIterator + row].split(' '))))
-    boardStateIterator = gameCellIterator + matrixDimension
-    for row in range(matrixDimension):
-        boardState.append(list(inputSpec[boardStateIterator + row]))
-    currentDepth = 0
-    if algorithm == 'MINIMAX':
+    if len(inputSpec) > 0:
+        matrixDimension = int(inputSpec[0].strip())
+        algorithm = inputSpec[1].strip()
+        player = inputSpec[2].strip()
+        moveMaker = currentPlayer = player
+        depth = int(inputSpec[3].strip())
+        gameCellIterator = 4
+        for row in range(matrixDimension):
+            gameCell.append(list(map(int, inputSpec[gameCellIterator + row].split(' '))))
+        boardStateIterator = gameCellIterator + matrixDimension
+        for row in range(matrixDimension):
+            boardState.append(list(inputSpec[boardStateIterator + row]))
+        currentDepth = 0
+        if algorithm == 'MINIMAX':
 
-        maximizerVal, iTile, jTile = minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                             currentDepth)
-    elif algorithm == 'ALPHABETA':
-        maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
-                                               currentDepth, -math.inf, math.inf)
+            maximizerVal, iTile, jTile = minimax(boardState, gameCell, matrixDimension, moveMaker, currentPlayer, depth,
+                                                 currentDepth)
+        elif algorithm == 'ALPHABETA':
+            maximizerVal, iTile, jTile = alphaBeta(boardState, gameCell, matrixDimension, moveMaker, currentPlayer,
+                                                   depth,
+                                                   currentDepth, -float("inf"), float("inf"))
 
     iNew, jNew, move, boardState = calculateMoveAndBreakTies(boardState, iTile, jTile, matrixDimension, moveMaker,
                                                              gameCell)
@@ -309,7 +310,7 @@ def main(inputFile, outputFile):
 
 if __name__ == '__main__':
     # main()
-    exec_time = '{:.2f}s'.format(timeit.timeit("main('../input/input2.txt', '../output/output2.txt')",
+    exec_time = '{:.2f}s'.format(timeit.timeit("main('../input/input20.txt', 'submit-output/output20.txt')",
                                                setup="from __main__ import main", number=1))
     print(exec_time)
     # isBoardComplete
@@ -318,7 +319,7 @@ if __name__ == '__main__':
     # getRaidScore
     # getOpponent
     # isPositionEmpty
-    # minimax
+    # minimax.py
     # alphabeta
     # isTerminalState
     # writeNextMove
