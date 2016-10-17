@@ -2,7 +2,7 @@
 # coding=utf-8
 
 import filecmp
-import minimax_tie_test
+import minimax_beta
 
 
 from timeit import Timer
@@ -10,7 +10,7 @@ fwrite = open('../testcases_output_5000/report.txt', 'w')
 failed = []
 for i in range(1, 5000):
     if i not in [449, 2767, 1371, 821]:
-        t = Timer(lambda: minimax_tie_test.main('../testcases-5000/INPUT/{0}.in'.format(i),
+        t = Timer(lambda: minimax_beta.main('../testcases-5000/INPUT/{0}.in'.format(i),
                           '../testcases_output_5000/{0}.out'.format(i)))
         exec_time = '{:.2f}s'.format(t.timeit(number=1))
         print('Input{0}----{1}'.format(i, exec_time))

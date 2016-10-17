@@ -8,4 +8,4 @@ def permutation(depth, freetiles):
         print(i)
         total += val // factorial(i)
     return total
-print(permutation(8, 25))
+print(permutation(4, 19))
