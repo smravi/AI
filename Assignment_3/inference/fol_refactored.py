@@ -4,14 +4,18 @@ import Assignment_3.inference.utils as utils
 import Assignment_3.inference.unify as unify
 import Assignment_3.inference.cnf as cnf
 import itertools
+from collections import namedtuple
 import time
+count = itertools.count(0, 1)
+
+Resolvent = namedtuple('Resolvent', 'substitute clause')
 count = itertools.count(0, 1)
 
 def preprocess(clauses):
     pre_clauses = clauses[:]
     new = set()
     for i_clause in range(len(clauses)):
-        for j_clause in range(i_clause +1 , len(clauses)):
+        for j_clause in range(i_clause + 1, len(clauses)):
             fol_res = fol_resolve(clauses[i_clause], clauses[j_clause])
             if fol_res is not False:
                 subst_values, resolvents = fol_res
@@ -28,6 +32,7 @@ def preprocess(clauses):
                     if len(new) > 0 and not new.issubset(clauses):
                         pre_clauses.extend(resolvents)
     return pre_clauses
+
 
 def get_predicates(clause, predicate_dict=None):
     if predicate_dict is None: predicate_dict = {}
@@ -58,11 +63,11 @@ def is_not(literal):
 
 
 def find_resolvent(ci, cj):
-    #TODO have to make sure only one resolvant happens at one time. Check if that is taken care.
+    # TODO have to make sure only one resolvant happens at one time. Check if that is taken care.
     ci_predicate = get_predicates(ci)
     cj_predicate = get_predicates(cj)
     resolvent = []
-    used = set()
+    visited = set()
     # only one should initial_resolve
     for key in ci_predicate.keys():
         if key in cj_predicate:
@@ -70,10 +75,10 @@ def find_resolvent(ci, cj):
                 for cj_literal in cj_predicate[key]:
                     if (is_not(ci_literal) and not is_not(cj_literal) or (
                                 not is_not(ci_literal) and is_not(cj_literal))):
-                        if not (ci_literal in used and cj_literal in used):
+                        if not (ci_literal in visited and cj_literal in visited):
                             resolvent.append((ci_literal, cj_literal))
-                            used.add(ci_literal)
-                            used.add(cj_literal)
+                            visited.add(ci_literal)
+                            visited.add(cj_literal)
 
     return resolvent
 
@@ -82,96 +87,63 @@ class Solved(Exception):
     pass
 
 
+def resolve_and_substitute(subst_values, substitute_clause):
+    new = set()
+    if subst_values:
+        print(('* subst :{}').format(subst_values))
+        print(('*before :{}').format(substitute_clause))
+        substitute_clause = unify.substitute_theta(subst_values, substitute_clause)
+        print(('*after :{}').format(substitute_clause))
+        print('------------------------------------------------')
+        new = set(substitute_clause)
+    return substitute_clause, new
+
+def checkTimeOut(timeout):
+    if time.time() > timeout:
+        return True
+
 def recur_resolve(clauses, goal, substall, recur_depth, timeout):
     print(('search: {}').format(goal))
-    new = set()
+    if recur_depth > (utils.RECURSION_LIMIT - 50):
+        return False
     setClause = set(clauses)
     for sentence in clauses:
-        # c = cnfutils.standardize_variables(c)
-        # loopDetected = False
-        # isResolved = False
-        if time.time() > timeout:
-            print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
+        if checkTimeOut(timeout):
             return False
         print(('trying: {}------{}').format(goal, sentence))
-        fol_res = fol_resolve(sentence, goal[0])
-
-        if fol_res is not False:
-            subst_values, resolvents = fol_res
-            print(('resolvant: {}').format(resolvents))
-            if len(resolvents) == 0:
+        resolve_list = fol_resolve(sentence, goal[0])
+        #this case if for handling for more than one resolvent in a clause
+        for resolvents in resolve_list:
+            print(('resolvant: {}').format(resolvents.clause))
+            if len(resolvents.clause) == 0:
                 print('###############')
-                print(('* subst :{}').format(subst_values))
+                print(('* subst :{}').format(resolvents.substitute))
                 return True
-                # isResolved = True
-                # return (isResolved, loopDetected)
             else:
-                if subst_values:
-                    print(('* subst :{}').format(subst_values))
-                    print(('*before :{}').format(resolvents))
-                    resolvents = unify.substitute_theta(subst_values, resolvents)
-                    print(('*after :{}').format(resolvents))
-                    print('------------------------------------------------')
-                    # for res in resolvents:
-                    #     res.operands = list(set(res.operands))
-                    #new = new.union(set(resolvents))
-                    new = set(resolvents)
+                new_clause_subst, new = resolve_and_substitute(resolvents.substitute, resolvents.clause)
                 if len(new) > 0 and new.issubset(setClause):
                     continue
-                    # if resolvents in clauses:
-                    #     print("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-                    #     continue
-                #isResolved, loopDetected = search(clauses + goal, resolvents, (subst_values, substall))
-                isResolved = recur_resolve(clauses + goal, resolvents, (subst_values, substall), recur_depth + 1, timeout)
+                dic, sent_clause = cnf.standardize(new_clause_subst[0])
+                isResolved = recur_resolve(clauses + goal, [sent_clause], (resolvents.substitute, substall), recur_depth + 1, timeout)
                 print('BACKTRACKING .......')
                 if isResolved:
                     return True
-    #             if isResolved and not loopDetected:
-    #                 return (True, False)
-    #             elif not isResolved and loopDetected:
-    #                 return (False, True)
-    #             else:
-    #                 continue
-    # return (False, False)
     return False
 
-
-def fol_resolution_corrected(KB, alpha):
-    sentences = KB
-    # clauses.extend(cnfutils.conjuncts(cnfutils.to_cnf(~alpha)))
-    try:
-        return recur_resolve(sentences, cnf.convert_with_and(cnf.get_cnf_sentence(~alpha)), None, 0, time.time() + 30)
-        # isResolved, loopDetected = search(clauses, cnf.convert_with_and(cnf.get_cnf_sentence(~alpha)), None)
-        # if loopDetected:
-        #     return False
-        # elif isResolved:
-        #     return True
-        # else:
-        #     return False
-    except Solved:
-        pass
-    else:
-        return False
-
-
 def fol_resolve(ci, cj):
-    """Return all clauses that can be obtained by resolving clauses ci and cj.
-    >>> for res in pl_resolve(to_cnf(A|B|C), to_cnf(~B|~C|F)):
-    ...    ppset(disjuncts(res))
-    set([A, C, F, ~C])
-    set([A, B, F, ~B])
-    """
+    resolve_list = []
     resolvents = find_resolvent(ci, cj)
     if len(resolvents) > 0:
         remove_set = set()
         for a, b in resolvents:
             if is_not(a):
-                lit1, lit2 = a.operands[0], b
+                lit1 = a.operands[0]
+                lit2 = b
             else:
-                lit1, lit2 = a, b.operands[0]
+                lit1 = a
+                lit2 = b.operands[0]
             try:
                 subst = {}
-                # unified = unifyutil.unify(lit1, lit2, {})
                 unify.unify(lit1, lit2, subst)
             except unify.Unification:
                 pass
@@ -192,12 +164,10 @@ def fol_resolve(ci, cj):
             new_clause = list(set(ci_left + cj_left))
             new_clause_expr = []
             if len(new_clause) > 0:
-                new_clause_expr.append(cnf.normalize_operator('|', new_clause))
-            return subst, new_clause_expr
-        else:
-            return False
-    else:
-        return False
+                new_clause_expr.append(cnf.normalize_operator(utils.OR, new_clause))
+            resolve_list.append(Resolvent(subst, new_clause_expr))
+
+    return resolve_list
 
 
 def remove_terms(term, clause):
@@ -211,25 +181,34 @@ def remove_terms(term, clause):
     return result
 
 
+def fol_resolution_corrected(KB, alpha):
+    sentences = KB
+    try:
+        return recur_resolve(sentences, cnf.convert_with_and(cnf.get_cnf_sentence(~alpha)), None, 0, time.time() + 30)
+    except Solved:
+        pass
+    else:
+        return False
+
 # s = ['Mother(Liz,Charley)', 'Father(Charley,Billy)', '~Mother(x,y) | Parent(x,y)',
 #      '~Father(x,y) | Parent(x,y)', '~Parent(x,y) | Ancestor(x,y)', '~(Parent(x,y) & Ancestor(y,z)) | Ancestor(x,z)']
 # s = ['Dog(D)', 'Owns(Jack, D)',
 #      '~Dog(y) | ~ Owns(x,y) |AnimalLover(x)', '~AnimalLover(w) | ~Animal(y) | ~Kills(w,y)',
 #      'Kills(Jack,Tuna) | Kills(Curiosity,Tuna)', 'Cat(Tuna)', '~Cat(z) | Animal(z)']
-# s = ['A(x) => H(x)', 'D(x,y) => ~H(y)', '((B(x,y) & C(x,y)) => A(x))', 'B(John,Alice)', 'B(John,Bob)',
-# '(D(x,y) & Q(y)) => C(x,y)', 'D(John,Alice)', 'Q(Bob)', 'D(John,Bob)', 'F(x) => G(x)', 'G(x) => H(x)',
-# 'H(x) => F(x)', 'R(x) => H(x)', 'R(Tom)']
-#
-# inputkb = []
-# for item in s:
-#     inputkb.extend(cnf.convert_with_and(cnf.get_cnf_sentence(item)))
-#
-# for i in inputkb:
-#     print(i)
-# print(len(inputkb))
-# # print('*********************************')
-# resolved = fol_resolution_corrected(inputkb, parse.parse_sentence('F(Bob)'))
-#
-# print(resolved)
+s = ['A(x) => H(x)', 'D(x,y) => ~H(y)', '((B(x,y) & C(x,y)) => A(x))', 'B(John,Alice)', 'B(John,Bob)',
+'(D(x,y) & Q(y)) => C(x,y)', 'D(John,Alice)', 'Q(Bob)', 'D(John,Bob)', 'F(x) => G(x)', 'G(x) => H(x)',
+'H(x) => F(x)', 'R(x) => H(x)', 'R(Tom)']
+
+inputkb = []
+for item in s:
+    inputkb.extend(cnf.convert_with_and(cnf.get_cnf_sentence(item)))
+
+for i in inputkb:
+    print(i)
+print(len(inputkb))
+print('*********************************')
+
+resolved = fol_resolution_corrected(inputkb, parse.parse_sentence('H(John)'))
+print(resolved)
 
 

@@ -159,3 +159,5 @@ def contains_operand(clause):
 #print(get_cnf_sentence('(~(B(x,y) & ~C(x,y)) => A(x))'))
 #print(get_cnf_sentence('~(Parent(x,y) & Ancestor(y,z)) | Ancestor(x,z)'))
 #print(get_cnf_sentence('(P(x) & Q(y)) | (R(x) & S(t))'))
+#print(convert_with_and(get_cnf_sentence('(P(x)&(Q(x)&(R(x)|S(x))))')))
+#print(convert_with_and(get_cnf_sentence('(P(x)=>((P(y)=>P(D)) & ~(Q(x,y)=>P(y))))')))
